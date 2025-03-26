@@ -23,7 +23,21 @@ This project provides a C library for communicating with Mitsubishi CNC M70 seri
 ### Installation
 
 1. Clone the repository:
+
+```bash
+git clone https://github.com/wqliceman/mitsubishi_cnc_m70_ezsocket_net.git
 ```
+2. Compile the project:
+
+```bash
+cd mitsubishi_cnc_m70_ezsocket_net
+make
+```
+3. Usage Example:
+```bash
+./mitsubishi_cnc_m70_ezsocket_net
+```
+
 # Program Overview
 
 - Project Name: mitsubishi_cnc_m70_net
