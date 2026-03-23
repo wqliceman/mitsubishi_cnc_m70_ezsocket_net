@@ -1,4 +1,14 @@
-﻿#include "socket.h"
+﻿/*
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2022-2026 wqliceman
+ * GitHub: iceman
+ * Email: wqliceman@gmail.com
+ *
+ * This file is part of the Mitsubishi CNC M70 EZSocket communication library.
+ * See the LICENSE file in the project root for full license information.
+ */
+
+#include "socket.h"
 #include <stdio.h>
 #include <string.h>
 #include "m70_log.h"
@@ -17,6 +27,24 @@
 #include <unistd.h>
 #endif
 
+static int socket_last_error_code(void)
+{
+#ifdef _WIN32
+	return WSAGetLastError();
+#else
+	return errno;
+#endif
+}
+
+static bool socket_error_is_interrupted(int err_code)
+{
+#ifdef _WIN32
+	return err_code == WSAEINTR;
+#else
+	return err_code == EINTR;
+#endif
+}
+
 int socket_send_data(int fd, void* buf, int nbytes)
 {
 	int nleft, nwritten;
@@ -33,11 +61,12 @@ int socket_send_data(int fd, void* buf, int nbytes)
 		nwritten = send(fd, ptr, nleft, 0);
 		if (nwritten <= 0)
 		{
-			if (errno == EINTR) {
+			int err_code = socket_last_error_code();
+			if (socket_error_is_interrupted(err_code)) {
 				M70_LOG_DEBUG("Send data interrupted, continuing to try");
 				continue;
 			} else {
-				M70_LOG_ERROR("Send data failed: %s (errno: %d)", strerror(errno), errno);
+				M70_LOG_ERROR("Send data failed: socket error=%d", err_code);
 				return -1;
 			}
 		}
@@ -74,11 +103,12 @@ int socket_recv_data(int fd, void* buf, int nbytes)
 		}
 		else if (nread < 0)
 		{
-			if (errno == EINTR) {
+			int err_code = socket_last_error_code();
+			if (socket_error_is_interrupted(err_code)) {
 				M70_LOG_DEBUG("Receive data interrupted, continuing to try");
 				continue;
 			} else {
-				M70_LOG_ERROR("Receive data failed: %s (errno: %d)", strerror(errno), errno);
+				M70_LOG_ERROR("Receive data failed: socket error=%d", err_code);
 				return -1;
 			}
 		}
@@ -115,11 +145,12 @@ int socket_recv_data_one_loop(int fd, void* buf, int nbytes)
 		}
 		else if (nread < 0)
 		{
-			if (errno == EINTR) {
+			int err_code = socket_last_error_code();
+			if (socket_error_is_interrupted(err_code)) {
 				M70_LOG_DEBUG("Single receive data interrupted, continuing to try");
 				continue;
 			} else {
-				M70_LOG_ERROR("Single receive data failed: %s (errno: %d)", strerror(errno), errno);
+				M70_LOG_ERROR("Single receive data failed: socket error=%d", err_code);
 				return -1;
 			}
 		}
@@ -149,7 +180,8 @@ int socket_open_tcp_client_socket(char* dest_ip, short dest_port)
 
 	if (sockFd < 0)
 	{
-		M70_LOG_ERROR("Failed to create socket: %s (errno: %d)", strerror(errno), errno);
+		int err_code = socket_last_error_code();
+		M70_LOG_ERROR("Failed to create socket: socket error=%d", err_code);
 		return -1;
 #pragma warning(disable : 4996)
 	}
@@ -163,8 +195,9 @@ int socket_open_tcp_client_socket(char* dest_ip, short dest_port)
 	ret = connect(sockFd, (struct sockaddr*)&server_addr, sizeof(server_addr));
 	if (ret != 0)
 	{ 
-		M70_LOG_ERROR("Failed to connect to %s:%d: %s (errno: %d)", dest_ip, dest_port, strerror(errno), errno);
-		M70_ERROR_SET(M70_ERROR_CODE_EX_CONN_REFUSED, "Failed to connect to %s:%d: %s", dest_ip, dest_port, strerror(errno));
+		int err_code = socket_last_error_code();
+		M70_LOG_ERROR("Failed to connect to %s:%d: socket error=%d", dest_ip, dest_port, err_code);
+		M70_ERROR_SET(M70_ERROR_CODE_EX_CONN_REFUSED, "Failed to connect to %s:%d: socket error=%d", dest_ip, dest_port, err_code);
 		socket_close_tcp_socket(sockFd);
 		sockFd = -1;
 	}

@@ -1,3 +1,13 @@
+/*
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2022-2026 wqliceman
+ * GitHub: iceman
+ * Email: wqliceman@gmail.com
+ *
+ * This file is part of the Mitsubishi CNC M70 EZSocket communication library.
+ * See the LICENSE file in the project root for full license information.
+ */
+
 /**
  * 日志和错误处理系统使用示例
  * 本文件展示了如何在项目中正确使用日志和错误处理系统

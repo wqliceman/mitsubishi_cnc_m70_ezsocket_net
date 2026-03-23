@@ -1,4 +1,14 @@
-﻿#include "m70_giop.h"
+﻿/*
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2022-2026 wqliceman
+ * GitHub: iceman
+ * Email: wqliceman@gmail.com
+ *
+ * This file is part of the Mitsubishi CNC M70 EZSocket communication library.
+ * See the LICENSE file in the project root for full license information.
+ */
+
+#include "m70_giop.h"
 #include "m70_ezsocket.h"
 #include "m70_ezsocket_private.h"
 #include "m70_error.h"
@@ -20,6 +30,22 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #endif
+
+static size_t m70_min_size(size_t a, size_t b)
+{
+	return a < b ? a : b;
+}
+
+static void m70_copy_text(char* dst, size_t dst_len, const char* src, size_t src_len)
+{
+	if (dst == NULL || dst_len == 0)
+		return;
+
+	size_t copy_len = m70_min_size(src_len, dst_len - 1);
+	if (copy_len > 0)
+		memcpy(dst, src, copy_len);
+	dst[copy_len] = '\0';
+}
 
 bool m70_cnc_connect(const char* ip_addr, int port, m70_nc_type_e type, m70_conn_t* conn)
 {
@@ -208,15 +234,20 @@ m70_error_code_e m70_cnc_read_nc_type(m70_conn_t* conn, m70_nc_machine_type_e* t
 
 m70_error_code_e m70_cnc_read_nc_version(m70_conn_t* conn, char* version)
 {
+	return m70_cnc_read_nc_version_ex(conn, version, BUFFER_SIZE);
+}
+
+m70_error_code_e m70_cnc_read_nc_version_ex(m70_conn_t* conn, char* version, size_t version_len)
+{
 	m70_error_code_e ret = M70_ERROR_CODE_FAILED;
-	if (!check_conn_is_valid(conn) || version == NULL)
+	if (!check_conn_is_valid(conn) || version == NULL || version_len == 0)
 		return ret;
 
 	T_string data = { 0 };
 	m70_data_type_e data_type = T_STR;
 	if (0 == melGetData(conn, 67, 1, 0, 0, &data_type, &data))
 	{
-		strncpy(version, data.text, data.msg_length);
+		m70_copy_text(version, version_len, data.text, (size_t)data.msg_length);
 		ret = M70_ERROR_CODE_OK;
 	}
 
@@ -225,15 +256,20 @@ m70_error_code_e m70_cnc_read_nc_version(m70_conn_t* conn, char* version)
 
 m70_error_code_e m70_cnc_read_nc_name_version(m70_conn_t* conn, char* version)
 {
+	return m70_cnc_read_nc_name_version_ex(conn, version, BUFFER_SIZE);
+}
+
+m70_error_code_e m70_cnc_read_nc_name_version_ex(m70_conn_t* conn, char* version, size_t version_len)
+{
 	m70_error_code_e ret = M70_ERROR_CODE_FAILED;
-	if (!check_conn_is_valid(conn) || version == NULL)
+	if (!check_conn_is_valid(conn) || version == NULL || version_len == 0)
 		return ret;
 
 	T_string data = { 0 };
 	m70_data_type_e data_type = T_STR;
 	if (0 == melGetData(conn, 68, 1, 0, 0, &data_type, &data))
 	{
-		strncpy(version, data.text, data.msg_length);
+		m70_copy_text(version, version_len, data.text, (size_t)data.msg_length);
 		ret = M70_ERROR_CODE_OK;
 	}
 	return ret;
@@ -241,15 +277,20 @@ m70_error_code_e m70_cnc_read_nc_name_version(m70_conn_t* conn, char* version)
 
 m70_error_code_e m70_cnc_read_plc_version(m70_conn_t* conn, char* version)
 {
+	return m70_cnc_read_plc_version_ex(conn, version, BUFFER_SIZE);
+}
+
+m70_error_code_e m70_cnc_read_plc_version_ex(m70_conn_t* conn, char* version, size_t version_len)
+{
 	m70_error_code_e ret = M70_ERROR_CODE_FAILED;
-	if (!check_conn_is_valid(conn) || version == NULL)
+	if (!check_conn_is_valid(conn) || version == NULL || version_len == 0)
 		return ret;
 
 	T_string data = { 0 };
 	m70_data_type_e data_type = T_STR;
 	if (0 == melGetData(conn, 67, 2, 0, 0, &data_type, &data))
 	{
-		strncpy(version, data.text, data.msg_length);
+		m70_copy_text(version, version_len, data.text, (size_t)data.msg_length);
 		ret = M70_ERROR_CODE_OK;
 	}
 
@@ -258,8 +299,13 @@ m70_error_code_e m70_cnc_read_plc_version(m70_conn_t* conn, char* version)
 
 m70_error_code_e m70_cnc_read_main_program_name(m70_conn_t* conn, short system_no, program_name_type_e type, char* prog)
 {
+	return m70_cnc_read_main_program_name_ex(conn, system_no, type, prog, BUFFER_SIZE);
+}
+
+m70_error_code_e m70_cnc_read_main_program_name_ex(m70_conn_t* conn, short system_no, program_name_type_e type, char* prog, size_t prog_len)
+{
 	m70_error_code_e ret = M70_ERROR_CODE_FAILED;
-	if (!check_conn_is_valid(conn))
+	if (!check_conn_is_valid(conn) || prog == NULL || prog_len == 0)
 		return ret;
 
 	bool is_ok = false;
@@ -290,12 +336,12 @@ m70_error_code_e m70_cnc_read_main_program_name(m70_conn_t* conn, short system_n
 	if (is_ok)
 	{
 		if (type == PRG_TYPE_ProgramNo || type == PRG_TYPE_ProgramPath)
-			strcpy(prog, strData.text);
+			m70_copy_text(prog, prog_len, strData.text, strlen(strData.text));
 		else
 		{
 			char strTemp[32] = { 0 };
-			sprintf(strTemp, "%ld", data);
-			strcpy(prog, strTemp);
+			snprintf(strTemp, sizeof(strTemp), "%ld", data);
+			m70_copy_text(prog, prog_len, strTemp, strlen(strTemp));
 		}
 		ret = M70_ERROR_CODE_OK;
 	}
@@ -305,8 +351,13 @@ m70_error_code_e m70_cnc_read_main_program_name(m70_conn_t* conn, short system_n
 
 m70_error_code_e m70_cnc_read_sub_program_name(m70_conn_t* conn, short system_no, program_name_type_e type, char* prog)
 {
+	return m70_cnc_read_sub_program_name_ex(conn, system_no, type, prog, BUFFER_SIZE);
+}
+
+m70_error_code_e m70_cnc_read_sub_program_name_ex(m70_conn_t* conn, short system_no, program_name_type_e type, char* prog, size_t prog_len)
+{
 	m70_error_code_e ret = M70_ERROR_CODE_FAILED;
-	if (!check_conn_is_valid(conn))
+	if (!check_conn_is_valid(conn) || prog == NULL || prog_len == 0)
 		return ret;
 
 	bool is_ok = false;
@@ -332,12 +383,12 @@ m70_error_code_e m70_cnc_read_sub_program_name(m70_conn_t* conn, short system_no
 	if (is_ok)
 	{
 		if (type == PRG_TYPE_ProgramNo || type == PRG_TYPE_ProgramPath)
-			strcpy(prog, strData.text);
+			m70_copy_text(prog, prog_len, strData.text, strlen(strData.text));
 		else
 		{
 			char strTemp[32] = { 0 };
-			sprintf(strTemp, "%ld", data);
-			strcpy(prog, strTemp);
+			snprintf(strTemp, sizeof(strTemp), "%ld", data);
+			m70_copy_text(prog, prog_len, strTemp, strlen(strTemp));
 		}
 		ret = M70_ERROR_CODE_OK;
 	}
@@ -417,14 +468,18 @@ m70_error_code_e m70_cnc_read_alarm(m70_conn_t* conn, short system_no, int msg_c
 m70_error_code_e m70_cnc_read_is_alarm(m70_conn_t* conn, short system_no, bool* alarm)
 {
 	m70_error_code_e ret = M70_ERROR_CODE_FAILED;
-	if (!check_conn_is_valid(conn))
+	if (!check_conn_is_valid(conn) || alarm == NULL)
 		return ret;
 
 	*alarm = false;
 	alarm_string alarm_info;
 	bool isOk = 0 == melGetCurrentAlarmMsg(conn, system_no, 1, M_ALM_ALL_ALARM, &alarm_info);
-	if (isOk && alarm_info.alarm_length > 0)
-		*alarm = true;
+	if (isOk)
+	{
+		if (alarm_info.alarm_length > 0)
+			*alarm = true;
+		ret = M70_ERROR_CODE_OK;
+	}
 
 	return ret;
 }
@@ -553,8 +608,13 @@ m70_error_code_e m70_cnc_read_all_axis_position(m70_conn_t* conn, short system_n
 
 m70_error_code_e m70_cnc_read_axis_name(m70_conn_t* conn, short system_no, char* names, int* axis_count)
 {
+	return m70_cnc_read_axis_name_ex(conn, system_no, names, BUFFER_SIZE, axis_count);
+}
+
+m70_error_code_e m70_cnc_read_axis_name_ex(m70_conn_t* conn, short system_no, char* names, size_t names_len, int* axis_count)
+{
 	m70_error_code_e ret = M70_ERROR_CODE_FAILED;
-	if (!check_conn_is_valid(conn))
+	if (!check_conn_is_valid(conn) || names == NULL || names_len == 0 || axis_count == NULL)
 		return ret;
 
 	byte data = 0;
@@ -564,17 +624,30 @@ m70_error_code_e m70_cnc_read_axis_name(m70_conn_t* conn, short system_no, char*
 	{
 		*axis_count = data;
 		size_t num = 0;
+		names[0] = '\0';
+		if (names_len <= 1)
+		{
+			return M70_ERROR_CODE_OK;
+		}
 		for (i = 1; i <= data; i++)
 		{
 			T_string temp = { 0 };
 			data_type = T_STR;
 			melGetData(conn, 127, 1, system_no, get_axis_real_no(i), &data_type, &temp);
-			strcpy(names + num, temp.text);
-			num += strlen(temp.text);
+			size_t seg_len = m70_min_size(strlen(temp.text), names_len - 1 - num);
+			if (seg_len > 0)
+			{
+				memcpy(names + num, temp.text, seg_len);
+				num += seg_len;
+				names[num] = '\0';
+			}
 			if (i < data)
 			{
-				strcat(names + num, ",");
-				num++;
+				if (num < names_len - 1)
+				{
+					names[num++] = ',';
+					names[num] = '\0';
+				}
 			}
 		}
 		ret = M70_ERROR_CODE_OK;
@@ -654,11 +727,11 @@ m70_error_code_e m70_cnc_read_spindle_override(m70_conn_t* conn, short system_no
 		}
 		else
 		{ // R7008 S command override First spindle {(6 spindles) difference 50} Second axis R7058
-			short ret = 0;
+			short temp_ret = 0;
 			data_type = T_SHORT;
-			if (0 == melGetData(conn, 55, 107008 + 50 * (system_no - 1), 0, 0, &data_type, &ret)) // R7008
+			if (0 == melGetData(conn, 55, 107008 + 50 * (system_no - 1), 0, 0, &data_type, &temp_ret)) // R7008
 			{
-				temp = ret;
+				temp = temp_ret;
 				ret = M70_ERROR_CODE_OK;
 			}
 		}
@@ -761,11 +834,11 @@ m70_error_code_e m70_cnc_read_feed_override(m70_conn_t* conn, short system_no, s
 		}
 		else
 		{ // R2500 第1切削进给倍率 第1系统 {(4个系统） 相差 200} 第二轴 R2700
-			short ret = 0;
+			short temp_ret = 0;
 			data_type = T_SHORT;
-			if (0 == melGetData(conn, 55, 102500 + 200 * (system_no - 1), 0, 0, &data_type, &ret)) // R2500
+			if (0 == melGetData(conn, 55, 102500 + 200 * (system_no - 1), 0, 0, &data_type, &temp_ret)) // R2500
 			{
-				temp_override = ret;
+				temp_override = temp_ret;
 				ret = M70_ERROR_CODE_OK;
 			}
 		}
@@ -912,7 +985,6 @@ m70_error_code_e m70_cnc_read_system_datetime(m70_conn_t* conn, uint32* date, ui
 
 	return ret;
 }
-
 
 uint32 get_axis_real_no(uint32 axis_index)
 {

@@ -1,3 +1,13 @@
+/*
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2022-2026 wqliceman
+ * GitHub: iceman
+ * Email: wqliceman@gmail.com
+ *
+ * This file is part of the Mitsubishi CNC M70 EZSocket communication library.
+ * See the LICENSE file in the project root for full license information.
+ */
+
 #include "utill.h"
 #include <stdlib.h>
 #include <string.h>

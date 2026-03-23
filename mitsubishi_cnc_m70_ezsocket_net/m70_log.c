@@ -1,4 +1,14 @@
-﻿#include "m70_log.h"
+﻿/*
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2022-2026 wqliceman
+ * GitHub: iceman
+ * Email: wqliceman@gmail.com
+ *
+ * This file is part of the Mitsubishi CNC M70 EZSocket communication library.
+ * See the LICENSE file in the project root for full license information.
+ */
+
+#include "m70_log.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,7 +39,9 @@ static struct {
     unsigned int max_file_size;      // Maximum log file size (KB)
     unsigned int max_file_count;     // Maximum number of log files
     unsigned int current_file_size;  // Current log file size (KB)
-} g_log_config = {
+}
+
+g_log_config = {
     false,                  // Not initialized
     M70_LOG_LEVEL_INFO,    // Default INFO level
     M70_LOG_TARGET_CONSOLE,// Default console output

@@ -1,8 +1,22 @@
-﻿#ifdef _WIN32
+﻿/*
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2022-2026 wqliceman
+ * GitHub: iceman
+ * Email: wqliceman@gmail.com
+ *
+ * This file is part of the Mitsubishi CNC M70 EZSocket communication library.
+ * See the LICENSE file in the project root for full license information.
+ */
+
+#ifdef _WIN32
 #include <WinSock2.h>
 #endif
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 #include "m70_log.h"
 #include "m70_error.h"
 #pragma warning(disable : 4996)
@@ -17,9 +31,10 @@
 #define DEFAULT_IP "192.168.123.130"
 #define DEFAULT_PORT 683
 #define TEST_COUNT 5000
-#define TEST_SLEEP_TIME 2
+#define TEST_SLEEP_TIME_SEC 2
 #define MAX_VERSION_LEN 128
 #define MAX_PROG_NAME_LEN 64
+#define MAX_AXIS_NAMES_LEN 128
 
 #include "m70_ezsocket.h"
 
@@ -34,17 +49,17 @@ static m70_error_code_e read_basic_info(m70_conn_t *conn)
 
     // Read CNC version information
     char nc_version[MAX_VERSION_LEN] = {0};
-    ret = m70_cnc_read_nc_version(conn, nc_version);
+    ret = m70_cnc_read_nc_version_ex(conn, nc_version, sizeof(nc_version));
     GET_RESULT(ret);
     printf("cnc version: %s\n", nc_version);
 
     char nc_name_version[MAX_VERSION_LEN] = {0};
-    ret = m70_cnc_read_nc_name_version(conn, nc_name_version);
+    ret = m70_cnc_read_nc_name_version_ex(conn, nc_name_version, sizeof(nc_name_version));
     GET_RESULT(ret);
     printf("cnc name version: %s\n", nc_name_version);
 
     char nc_plc_version[MAX_VERSION_LEN] = {0};
-    ret = m70_cnc_read_plc_version(conn, nc_plc_version);
+    ret = m70_cnc_read_plc_version_ex(conn, nc_plc_version, sizeof(nc_plc_version));
     GET_RESULT(ret);
     printf("cnc plc version: %s\n", nc_plc_version);
 
@@ -85,16 +100,16 @@ static m70_error_code_e read_basic_info(m70_conn_t *conn)
 
     // Read program information
     char main_prog[MAX_PROG_NAME_LEN] = {0};
-    ret = m70_cnc_read_main_program_name(conn, 1, PRG_TYPE_ProgramNo, main_prog);
+    ret = m70_cnc_read_main_program_name_ex(conn, 1, PRG_TYPE_ProgramNo, main_prog, sizeof(main_prog));
     GET_RESULT(ret);
     printf("main prog: %s\n", main_prog);
 
-    ret = m70_cnc_read_main_program_name(conn, 1, PRG_TYPE_SequenceNumber, main_prog);
+    ret = m70_cnc_read_main_program_name_ex(conn, 1, PRG_TYPE_SequenceNumber, main_prog, sizeof(main_prog));
     GET_RESULT(ret);
     printf("main prog seq no: %s\n", main_prog);
 
     char sub_prog[MAX_PROG_NAME_LEN] = {0};
-    ret = m70_cnc_read_sub_program_name(conn, 1, PRG_TYPE_ProgramNo, sub_prog);
+    ret = m70_cnc_read_sub_program_name_ex(conn, 1, PRG_TYPE_ProgramNo, sub_prog, sizeof(sub_prog));
     GET_RESULT(ret);
     printf("sub prog: %s\n", sub_prog);
 
@@ -159,7 +174,7 @@ static m70_error_code_e read_basic_info(m70_conn_t *conn)
     GET_RESULT(ret);
     printf("auto op time: %d\n", auto_op_time);
 
-    ret = m70_cnc_read_auto_startup_time(conn, &auto_op_time);
+    ret = m70_cnc_read_auto_startup_time(conn, &auto_startup_time);
     GET_RESULT(ret);
     printf("auto startup time: %d\n", auto_startup_time);
 
@@ -184,9 +199,9 @@ static m70_error_code_e read_axis_position_info(m70_conn_t *conn)
     m70_error_code_e ret;
     int failed_count = 0;
 
-    char axis_names[10] = {0};
+    char axis_names[MAX_AXIS_NAMES_LEN] = {0};
     int axis_count = 0;
-    ret = m70_cnc_read_axis_name(conn, 1, axis_names, &axis_count);
+    ret = m70_cnc_read_axis_name_ex(conn, 1, axis_names, sizeof(axis_names), &axis_count);
     GET_RESULT(ret);
 
     if (ret == 0)
@@ -260,9 +275,9 @@ int main(int argc, char **argv)
 
 // Test delay
 #ifdef _WIN32
-        Sleep(TEST_SLEEP_TIME);
+    Sleep(TEST_SLEEP_TIME_SEC * 1000);
 #else
-        sleep(TEST_SLEEP_TIME);
+    sleep(TEST_SLEEP_TIME_SEC);
 #endif
     }
 
@@ -293,7 +308,7 @@ void log_system_init_example(void)
     memset(&log_config, 0, sizeof(m70_log_config_t));
 
     // Set log level - DEBUG level can be used during development, INFO or higher level can be used in production environment
-    log_config.level = M70_LOG_LEVEL_WARNING;
+    log_config.level = M70_LOG_LEVEL_INFO;
 
     // Set log output target - can be console, file, or both
     log_config.target = M70_LOG_TARGET_FILE;
