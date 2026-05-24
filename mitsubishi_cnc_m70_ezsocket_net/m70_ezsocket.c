@@ -59,6 +59,7 @@ bool m70_cnc_connect(const char* ip_addr, int port, m70_nc_type_e type, m70_conn
 	}
 
 	memset((void*)conn, 0, sizeof(m70_conn_t));
+	conn->socket = -1;
 	bool result = giop_connect(ip_addr, type, port, conn);
 	
 	if (result) {
@@ -73,7 +74,13 @@ bool m70_cnc_connect(const char* ip_addr, int port, m70_nc_type_e type, m70_conn
 
 void m70_cnc_disconnect(m70_conn_t* conn)
 {
-	if (!check_conn_is_valid(conn)) {
+	if (conn == NULL) {
+		M70_LOG_WARNING("Attempting to disconnect an invalid connection");
+		M70_ERROR_SET(M70_ERROR_CODE_EX_CONN_INVALID, "Attempting to disconnect an invalid connection");
+		return;
+	}
+
+	if (conn->socket < 0 && !conn->connected) {
 		M70_LOG_WARNING("Attempting to disconnect an invalid connection");
 		M70_ERROR_SET(M70_ERROR_CODE_EX_CONN_INVALID, "Attempting to disconnect an invalid connection");
 		return;

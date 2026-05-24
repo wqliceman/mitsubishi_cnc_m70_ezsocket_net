@@ -19,6 +19,7 @@
 #include <ws2tcpip.h>
 #include <windows.h>
 #pragma comment(lib, "ws2_32.lib") /* Linking with winsock library */
+static int g_socket_runtime_refcount = 0;
 #else
 #include <errno.h>
 #include <sys/types.h>
@@ -26,6 +27,8 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #endif
+
+#define M70_SOCKET_INVALID (-1)
 
 static int socket_last_error_code(void)
 {
@@ -42,6 +45,35 @@ static bool socket_error_is_interrupted(int err_code)
 	return err_code == WSAEINTR;
 #else
 	return err_code == EINTR;
+#endif
+}
+
+static bool socket_platform_init(void)
+{
+#ifdef _WIN32
+	WSADATA wsa_data;
+	if (g_socket_runtime_refcount == 0) {
+		int ret = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+		if (ret != 0) {
+			M70_LOG_ERROR("Failed to initialize Winsock: error=%d", ret);
+			M70_ERROR_SET(M70_ERROR_CODE_EX_SOCKET_FAILED, "Failed to initialize Winsock: error=%d", ret);
+			return false;
+		}
+	}
+
+	++g_socket_runtime_refcount;
+#endif
+	return true;
+}
+
+static void socket_platform_cleanup(void)
+{
+#ifdef _WIN32
+	if (g_socket_runtime_refcount > 0) {
+		--g_socket_runtime_refcount;
+		if (g_socket_runtime_refcount == 0)
+			WSACleanup();
+	}
 #endif
 }
 
@@ -126,54 +158,17 @@ int socket_recv_data(int fd, void* buf, int nbytes)
 
 int socket_recv_data_one_loop(int fd, void* buf, int nbytes)
 {
-	int nleft, nread;
-	char* ptr = (char*)buf;
-
-	if (fd < 0) {
-		M70_LOG_ERROR("Single receive data failed: Invalid socket descriptor %d", fd);
-		return -1;
-	}
-
-	nleft = nbytes;
-	while (nleft > 0)
-	{
-		nread = recv(fd, ptr, nleft, 0);
-		if (nread == 0)
-		{
-			M70_LOG_WARNING("Connection closed, received EOF");
-			break;
-		}
-		else if (nread < 0)
-		{
-			int err_code = socket_last_error_code();
-			if (socket_error_is_interrupted(err_code)) {
-				M70_LOG_DEBUG("Single receive data interrupted, continuing to try");
-				continue;
-			} else {
-				M70_LOG_ERROR("Single receive data failed: socket error=%d", err_code);
-				return -1;
-			}
-		}
-		else
-		{
-			nleft -= nread;
-			ptr += nread;
-			M70_LOG_DEBUG("Single receive received %d bytes of data", nread);
-
-			// Currently only receive once
-			break;
-		}
-	}
-
-	M70_LOG_DEBUG("Single receive completed, received a total of %d bytes of data", nbytes - nleft);
-	return (nbytes - nleft);
+	return socket_recv_data(fd, buf, nbytes);
 }
 
 int socket_open_tcp_client_socket(char* dest_ip, short dest_port)
 {
-	int sockFd = 0;
+	int sockFd = M70_SOCKET_INVALID;
 	struct sockaddr_in server_addr;
 	int ret;
+
+	if (!socket_platform_init())
+		return M70_SOCKET_INVALID;
 
 	M70_LOG_INFO("Attempting to create TCP client socket connection to %s:%d", dest_ip, dest_port);
 	sockFd = (int)socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -182,8 +177,8 @@ int socket_open_tcp_client_socket(char* dest_ip, short dest_port)
 	{
 		int err_code = socket_last_error_code();
 		M70_LOG_ERROR("Failed to create socket: socket error=%d", err_code);
-		return -1;
-#pragma warning(disable : 4996)
+		socket_platform_cleanup();
+		return M70_SOCKET_INVALID;
 	}
 
 	memset((char*)&server_addr, 0, sizeof(server_addr));
@@ -199,25 +194,27 @@ int socket_open_tcp_client_socket(char* dest_ip, short dest_port)
 		M70_LOG_ERROR("Failed to connect to %s:%d: socket error=%d", dest_ip, dest_port, err_code);
 		M70_ERROR_SET(M70_ERROR_CODE_EX_CONN_REFUSED, "Failed to connect to %s:%d: socket error=%d", dest_ip, dest_port, err_code);
 		socket_close_tcp_socket(sockFd);
-		sockFd = -1;
+		return M70_SOCKET_INVALID;
 	}
 
+	if (sockFd >= 0) {
 #ifdef _WIN32
-	int timeout = 5000; // 5s
-	ret = setsockopt(sockFd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout));
-	ret = setsockopt(sockFd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
+		int timeout = 5000;
+		ret = setsockopt(sockFd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout));
+		ret = setsockopt(sockFd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 #else
-	struct timeval timeout = { 5, 0 }; // 3s
-	ret = setsockopt(sockFd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout));
-	ret = setsockopt(sockFd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
+		struct timeval timeout = { 5, 0 };
+		ret = setsockopt(sockFd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout));
+		ret = setsockopt(sockFd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 #endif
+	}
 
 	return sockFd;
 }
 
 void socket_close_tcp_socket(int sockFd)
 {
-	if (sockFd > 0)
+	if (sockFd >= 0)
 	{
 		M70_LOG_DEBUG("Closing socket connection: %d", sockFd);
 #ifdef _WIN32
@@ -225,6 +222,7 @@ void socket_close_tcp_socket(int sockFd)
 #else
 		close(sockFd);
 #endif
+		socket_platform_cleanup();
 	}
 	else
 	{

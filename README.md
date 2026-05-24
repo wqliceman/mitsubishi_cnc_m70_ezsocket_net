@@ -43,10 +43,11 @@ It provides:
 - Primary protocol: EZSocket
 - Tested target: Mitsubishi M70
 - Build outputs: executable test app by default
+- Windows runtime: Winsock is initialized and cleaned up inside the library
 
 ## Repository Layout
 
-- `mitsubishi_cnc_m70_net/`: core library source and test entry (`main.c`)
+- `mitsubishi_cnc_m70_ezsocket_net/`: core library source and test entry (`main.c`)
 - `README.md`: English documentation
 - `README.zh-CN.md`: Chinese documentation
 - `makefile`, `common.mk`, `config.mk`: GNU Make build entry/config
@@ -68,7 +69,7 @@ Default target builds `mitsubishi_cnc_test`.
 ### Windows
 
 You can use:
-- Visual Studio solution in `mitsubishi_cnc_m70_net/mitsubishi_cnc_m70_net.sln`
+- Visual Studio solution in `mitsubishi_cnc_m70_ezsocket_net/mitsubishi_cnc_m70_ezsocket_net.sln`
 - Or build via WSL using GNU Make
 
 ## Quick Start
@@ -103,7 +104,7 @@ int main(void)
 ```
 
 For a complete, maintained workflow example, see:
-- `mitsubishi_cnc_m70_net/main.c`
+- `mitsubishi_cnc_m70_ezsocket_net/main.c`
 
 ## API Summary
 
@@ -133,7 +134,7 @@ m70_error_code_e m70_cnc_write_common_variable_comment(m70_conn_t* conn, uint32 
 ```
 
 See full API declarations in:
-- `mitsubishi_cnc_m70_net/m70_ezsocket.h`
+- `mitsubishi_cnc_m70_ezsocket_net/m70_ezsocket.h`
 
 ## Safe String API (_ex)
 
@@ -152,8 +153,12 @@ Legacy APIs are retained for backward compatibility and internally delegate to s
 
 ## Logging and Error Handling
 
-- Logging module: `mitsubishi_cnc_m70_net/m70_log.h`
-- Error module: `mitsubishi_cnc_m70_net/m70_error.h`
+- On Windows, callers do not need to invoke `WSAStartup`/`WSACleanup`; the library manages socket runtime internally.
+
+This release also hardens frame reads on the TCP layer so GIOP/EZSocket responses are drained to the requested length instead of assuming a single `recv` call returns the full payload.
+
+- Logging module: `mitsubishi_cnc_m70_ezsocket_net/m70_log.h`
+- Error module: `mitsubishi_cnc_m70_ezsocket_net/m70_error.h`
 
 Recommended pattern:
 

@@ -233,15 +233,6 @@ static m70_error_code_e read_axis_position_info(m70_conn_t *conn)
 // 4. Main function optimization
 int main(int argc, char **argv)
 {
-// Initialize network
-#ifdef _WIN32
-    WSADATA wsa;
-    if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
-    {
-        return -1;
-    }
-#endif
-
     log_system_init_example();
 
     // Get connection parameters
@@ -250,7 +241,7 @@ int main(int argc, char **argv)
 
     // Establish connection
     m70_conn_t conn = {0};
-    if (!m70_cnc_connect(plc_ip, plc_port, EZNC_SYS_MELDAS700M, &conn) || conn.socket <= 0)
+    if (!m70_cnc_connect(plc_ip, plc_port, EZNC_SYS_MELDAS700M, &conn) || conn.socket < 0)
     {
         printf("Failed to connect to PLC\n");
         return -1;
@@ -285,10 +276,6 @@ int main(int argc, char **argv)
 
     // Clean up resources
     m70_cnc_disconnect(&conn);
-
-#ifdef _WIN32
-    WSACleanup();
-#endif
 
     // Close log system
     M70_LOG_INFO("Example program ended, closing log system");

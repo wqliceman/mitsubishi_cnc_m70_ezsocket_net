@@ -43,10 +43,11 @@
 - 核心协议：EZSocket
 - 已验证设备：Mitsubishi M70
 - 默认构建产物：测试可执行程序
+- Windows 运行时：库内部自动完成 Winsock 初始化与清理
 
 ## 目录说明
 
-- `mitsubishi_cnc_m70_net/`：核心源码与测试入口（`main.c`）
+- `mitsubishi_cnc_m70_ezsocket_net/`：核心源码与测试入口（`main.c`）
 - `README.md`：英文文档
 - `README.zh-CN.md`：中文文档
 - `makefile`、`common.mk`、`config.mk`：GNU Make 构建入口与配置
@@ -68,7 +69,7 @@ make
 ### Windows
 
 可选两种方式：
-- 使用 `mitsubishi_cnc_m70_net/mitsubishi_cnc_m70_net.sln`（Visual Studio）
+- 使用 `mitsubishi_cnc_m70_ezsocket_net/mitsubishi_cnc_m70_ezsocket_net.sln`（Visual Studio）
 - 使用 WSL 执行 GNU Make
 
 ## 快速开始
@@ -103,7 +104,7 @@ int main(void)
 ```
 
 完整且持续维护的流程示例请参考：
-- `mitsubishi_cnc_m70_net/main.c`
+- `mitsubishi_cnc_m70_ezsocket_net/main.c`
 
 ## API 概览
 
@@ -133,7 +134,7 @@ m70_error_code_e m70_cnc_write_common_variable_comment(m70_conn_t* conn, uint32 
 ```
 
 完整 API 声明见：
-- `mitsubishi_cnc_m70_net/m70_ezsocket.h`
+- `mitsubishi_cnc_m70_ezsocket_net/m70_ezsocket.h`
 
 ## 安全字符串接口（_ex）
 
@@ -151,8 +152,10 @@ m70_cnc_read_axis_name_ex(conn, system_no, names, names_len, &axis_count);
 
 ## 日志与错误处理
 
-- 日志模块：`mitsubishi_cnc_m70_net/m70_log.h`
-- 错误模块：`mitsubishi_cnc_m70_net/m70_error.h`
+- Windows 下调用方无需再手工调用 `WSAStartup`/`WSACleanup`，库会自行管理 socket 运行时。
+- TCP 层现在会把协议响应读满目标长度，避免把一次 `recv` 误当成完整 GIOP/EZSocket 帧。
+- 日志模块：`mitsubishi_cnc_m70_ezsocket_net/m70_log.h`
+- 错误模块：`mitsubishi_cnc_m70_ezsocket_net/m70_error.h`
 
 建议统一调用检查：
 

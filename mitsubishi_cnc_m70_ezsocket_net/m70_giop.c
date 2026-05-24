@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "m70_giop.h"
+#include "m70_error.h"
 #include "socket.h"
 
 #ifdef _WIN32
@@ -197,11 +198,11 @@ bool giop_connect(const char* ip, int type, int port, m70_conn_t* conn)
 	srand((uint32)time(NULL));
 	conn->request_id = rand() % 0xFFFF;
 
-	if (conn->socket > 0)
+	if (conn->connected && conn->socket >= 0)
 		giop_disconnect(conn);
 
 	conn->socket = socket_open_tcp_client_socket((char*)ip, port);
-	if (conn->socket > 0)
+	if (conn->socket >= 0)
 	{
 		conn->connected = true;
 		return true;
@@ -932,6 +933,17 @@ int mel_receive_response(m70_conn_t* conn, giop_header* giop, int* remain_length
 
 	int recv_count = sizeof(giop_header);
 	int count = socket_recv_data_one_loop(conn->socket, giop, recv_count);
+	if (recv_count != count)
+	{
+		if (count < 0)
+			M70_ERROR_SET(M70_ERROR_CODE_EX_SOCKET_FAILED, "Failed to receive GIOP header");
+		else
+			M70_ERROR_SET(M70_ERROR_CODE_EX_TRANS_INCOMPLETE, "Incomplete GIOP header received: expected=%d, actual=%d", recv_count, count);
+
+		giop_disconnect(conn);
+		return -1;
+	}
+
 	if (recv_count == count)
 	{
 		*remain_length = giop->data_length;
@@ -992,5 +1004,5 @@ void build_request_pack_header(m70_conn_t* conn, request_pack_header* request, i
 
 bool check_conn_is_valid(m70_conn_t* conn)
 {
-	return conn != NULL && conn->socket > 0 && conn->connected;
+	return conn != NULL && conn->socket >= 0 && conn->connected;
 }
