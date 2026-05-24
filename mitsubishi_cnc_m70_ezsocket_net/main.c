@@ -19,7 +19,9 @@
 #endif
 #include "m70_log.h"
 #include "m70_error.h"
+#ifdef _MSC_VER
 #pragma warning(disable : 4996)
+#endif
 
 #define GET_RESULT(ret)     \
     {                       \

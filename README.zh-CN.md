@@ -64,13 +64,29 @@ make clean
 make
 ```
 
-默认会生成 `mitsubishi_cnc_test`。
+默认会生成：
+- `build/lib/libm70_ezsocket.a`
+- POSIX/GCC 工具链下的 `build/lib/libm70_ezsocket.so`
+- `build/bin/mitsubishi_cnc_m70_test`
+
+额外目标：
+
+```bash
+make static
+make shared
+make example
+make test
+```
+
+`make test` 会运行一个 socket 回归测试，覆盖分片读取和不完整响应触发断链清理两类场景。
 
 ### Windows
 
 可选两种方式：
 - 使用 `mitsubishi_cnc_m70_ezsocket_net/mitsubishi_cnc_m70_ezsocket_net.sln`（Visual Studio）
-- 使用 WSL 执行 GNU Make
+- 使用 WSL 执行 GNU Make 构建库、示例与测试目标
+
+当前 Visual Studio 工程仍然主要用于示例程序构建；独立静态库/动态库产物由上述 GNU Make 流程提供。
 
 ## 快速开始
 

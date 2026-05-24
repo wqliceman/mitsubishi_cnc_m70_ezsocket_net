@@ -9,6 +9,7 @@
  */
 
 #include "utill.h"
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -158,7 +159,6 @@ uint64 bytes_to_ubig_int(byte* bytes)
 
 void float_to_bytes(float i, byte* bytes)
 {
-	int size = 4;
 	int temp = *(int*)&i;
 	int32_to_bytes(temp, bytes);
 }

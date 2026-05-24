@@ -64,13 +64,29 @@ make clean
 make
 ```
 
-Default target builds `mitsubishi_cnc_test`.
+Default target now builds:
+- `build/lib/libm70_ezsocket.a`
+- `build/lib/libm70_ezsocket.so` on POSIX/GCC toolchains
+- `build/bin/mitsubishi_cnc_m70_test`
+
+Additional targets:
+
+```bash
+make static
+make shared
+make example
+make test
+```
+
+`make test` runs a socket regression test that covers fragmented reads and incomplete-response disconnect handling.
 
 ### Windows
 
 You can use:
 - Visual Studio solution in `mitsubishi_cnc_m70_ezsocket_net/mitsubishi_cnc_m70_ezsocket_net.sln`
-- Or build via WSL using GNU Make
+- Or build library/example/test targets via WSL using GNU Make
+
+The Visual Studio project currently remains an example application project. The dedicated static/shared library outputs are provided by the GNU Make flow above.
 
 ## Quick Start
 

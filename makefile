@@ -1,21 +1,43 @@
 
 include config.mk
+
+.PHONY: all static shared example test clean
+
 all:
-#-C specifies the directory
-#make -C signal   
-
-#Executable files should be placed last
-#make -C app      
-
-#Use shell command 'for', shell variables use two $ symbols
 	@for dir in $(BUILD_DIR); \
 	do \
-		make -C $$dir; \
+		$(MAKE) -C $$dir all; \
 	done
 
+static:
+	@for dir in $(BUILD_DIR); \
+	do \
+		$(MAKE) -C $$dir static; \
+	done
+
+shared:
+	@for dir in $(BUILD_DIR); \
+	do \
+		$(MAKE) -C $$dir shared; \
+	done
+
+example:
+	@for dir in $(BUILD_DIR); \
+	do \
+		$(MAKE) -C $$dir example; \
+	done
+
+test:
+	@for dir in $(BUILD_DIR); \
+	do \
+		$(MAKE) -C $$dir test; \
+	done
 
 clean:
-#-rf: Remove directories, force delete
-	rm -rf app/link_obj app/dep nginx
+	@for dir in $(BUILD_DIR); \
+	do \
+		$(MAKE) -C $$dir clean; \
+	done
+	rm -rf $(BUILD_OUTPUT_DIR) app/link_obj app/dep nginx
 	rm -rf signal/*.gch app/*.gch
 
