@@ -8,16 +8,20 @@ English | [简体中文](README.zh-CN.md)
 
 - Copyright (c) 2022-2026 wqliceman
 - GitHub: iceman
-- Email: wqliceman@gmail.com
+- Email: [wqliceman@gmail.com](mailto:wqliceman@gmail.com)
 - License: MIT, see [LICENSE](LICENSE)
 
 ## Contents
 
 - Overview
+    - Architecture at a Glance
 - Project Status
 - Repository Layout
+    - Source Module Map
 - Build
+    - Build and CI Coverage Matrix
 - Quick Start
+    - Connection and Read Flow
 - API Summary
 - Safe String API (_ex)
 - Logging and Error Handling
@@ -32,10 +36,28 @@ English | [简体中文](README.zh-CN.md)
 This project is a C library for Ethernet communication with Mitsubishi CNC controllers (focused on M70, EZSocket protocol).
 
 It provides:
+
 - Connection management
 - Structured data read/write APIs
 - Logging and error reporting utilities
 - Cross-platform support for Windows and Linux
+
+### Architecture at a Glance
+
+```mermaid
+flowchart LR
+    App[User application or sample] --> API[m70_ezsocket public API]
+    API --> GIOP[GIOP and EZSocket request layer]
+    GIOP --> Socket[TCP socket layer]
+    Socket --> CNC[Mitsubishi CNC M70]
+
+    API -. logs and errors .-> Support[m70_log and m70_error]
+    GIOP -. logs and errors .-> Support
+    Socket -. logs and errors .-> Support
+    Runtime[Windows Winsock runtime] -. managed inside library .-> Socket
+```
+
+The public API layer exposes typed read and write functions, the GIOP layer builds and parses EZSocket traffic, and the socket layer owns TCP transport details such as draining the requested response length.
 
 ## Project Status
 
@@ -53,6 +75,29 @@ It provides:
 - `makefile`, `common.mk`, `config.mk`: GNU Make build entry/config
 - `LICENSE`: MIT license
 
+### Source Module Map
+
+```mermaid
+flowchart LR
+    Sample[main.c sample] --> Public[m70_ezsocket.h]
+    Public --> ApiImpl[m70_ezsocket.c]
+    Types[typedef.h] --> Public
+    Types --> ApiImpl
+
+    ApiImpl --> GIOP[m70_giop.h and m70_giop.c]
+    ApiImpl --> Socket[socket.h and socket.c]
+
+    GIOP --> Socket
+    ApiImpl -. uses .-> Log[m70_log.h and m70_log.c]
+    ApiImpl -. uses .-> Error[m70_error.h and m70_error.c]
+    GIOP -. uses .-> Log
+    GIOP -. uses .-> Error
+    Socket -. uses .-> Log
+    Socket -. uses .-> Error
+```
+
+For maintainers, the important boundary is that `m70_ezsocket` owns the public API, `m70_giop` owns EZSocket framing and response parsing, and `socket` owns transport details and runtime initialization.
+
 ## Build
 
 ### Linux / WSL (GNU Make)
@@ -65,6 +110,7 @@ make
 ```
 
 Default target now builds:
+
 - `build/lib/libm70_ezsocket.a`
 - `build/lib/libm70_ezsocket.so` on POSIX/GCC toolchains
 - `build/bin/mitsubishi_cnc_m70_test`
@@ -83,10 +129,12 @@ make test
 ### Windows
 
 You can use:
+
 - Visual Studio solution in `mitsubishi_cnc_m70_ezsocket_net/mitsubishi_cnc_m70_ezsocket_net.sln`
 - Or build library/example/test targets via WSL using GNU Make
 
 The Visual Studio solution now contains three native MSVC projects:
+
 - static library: `m70_ezsocket.lib`
 - dynamic library: `m70_ezsocket.dll` plus import library
 - sample application: `mitsubishi_cnc_m70_test.exe`
@@ -94,6 +142,7 @@ The Visual Studio solution now contains three native MSVC projects:
 The sample project keeps the original `Debug`/`Release` configurations for static linking and adds `DebugDll`/`ReleaseDll` configurations for DLL consumption. Those DLL-linked configurations define `M70_USE_DLL` and copy `m70_ezsocket.dll` beside the sample executable after build.
 
 Native MSVC outputs are written to:
+
 - `mitsubishi_cnc_m70_ezsocket_net/build/msvc/static/<Platform>/<Configuration>/`
 - `mitsubishi_cnc_m70_ezsocket_net/build/msvc/dll/<Platform>/<Configuration>/`
 - `mitsubishi_cnc_m70_ezsocket_net/build/msvc/sample/<Platform>/<Configuration>/`
@@ -103,6 +152,15 @@ When consuming the DLL from external code, define `M70_USE_DLL` before including
 GitHub Actions CI is available in `.github/workflows/ci.yml` and validates GNU Make on Ubuntu plus MSVC `Release` and `ReleaseDll` builds on Windows for both `x86` and `x64`.
 
 The GNU Make flow above still provides the POSIX shared library and the regression test target.
+
+### Build and CI Coverage Matrix
+
+| Path | Platform | Entry point | Main outputs | CI coverage |
+| --- | --- | --- | --- | --- |
+| GNU Make | Linux / WSL | `make all`, `make test` | static library, POSIX shared library, sample binary, regression test | Ubuntu job in `.github/workflows/ci.yml` |
+| MSVC static link | Windows x86 / x64 | `Release` solution configuration | `m70_ezsocket.lib` and statically linked sample app | Windows job in `.github/workflows/ci.yml` |
+| MSVC DLL | Windows x86 / x64 | `ReleaseDll` solution configuration | `m70_ezsocket.dll`, import library, DLL-linked sample app | Windows job in `.github/workflows/ci.yml` |
+| Local debug validation | Windows x86 / x64 | `Debug`, `DebugDll` | debug static or DLL sample workflows | local Visual Studio use |
 
 ## Quick Start
 
@@ -136,7 +194,33 @@ int main(void)
 ```
 
 For a complete, maintained workflow example, see:
+
 - `mitsubishi_cnc_m70_ezsocket_net/main.c`
+
+### Connection and Read Flow
+
+```mermaid
+sequenceDiagram
+    participant App as Caller
+    participant API as m70_ezsocket
+    participant GIOP as GIOP/EZSocket
+    participant Sock as socket
+    participant CNC as CNC
+
+    App->>API: m70_cnc_connect(ip, port, type, conn)
+    API->>GIOP: giop_connect(...)
+    GIOP->>Sock: socket_open_tcp_client_socket(...)
+    Sock->>CNC: TCP connect
+
+    App->>API: m70_cnc_read_*()
+    API->>GIOP: build and send request
+    GIOP->>Sock: send and recv exact length
+    Sock->>CNC: TCP exchange
+    GIOP-->>API: parsed response payload
+    API-->>App: typed result or error code
+```
+
+This flow is useful when debugging connection failures, partial reads, or DLL consumer integration because it shows where transport, protocol, and public API responsibilities split.
 
 ## API Summary
 
@@ -150,6 +234,7 @@ void m70_cnc_disconnect(m70_conn_t* conn);
 ### Common Read APIs
 
 Representative functions:
+
 - `m70_cnc_read_status`
 - `m70_cnc_read_system_count`
 - `m70_cnc_read_nc_axis_count`
@@ -166,6 +251,7 @@ m70_error_code_e m70_cnc_write_common_variable_comment(m70_conn_t* conn, uint32 
 ```
 
 See full API declarations in:
+
 - `mitsubishi_cnc_m70_ezsocket_net/m70_ezsocket.h`
 
 ## Safe String API (_ex)
@@ -238,7 +324,7 @@ Recommended pattern:
 - `m70_cnc_read_feed_speed`
 - `m70_cnc_read_feed_override`
 
-### Program 
+### Program
 
 - `m70_cnc_read_main_program_name_ex`
 - `m70_cnc_read_sub_program_name_ex`
@@ -262,10 +348,12 @@ Recommended pattern:
 ### 1. Connection Failed
 
 Symptoms:
+
 - `m70_cnc_connect` returns `false`
 - Connection-related logs in `m70_log`
 
 Checklist:
+
 - Verify CNC IP, port, and model type (`m70_nc_type_e`)
 - Confirm CNC Ethernet module and EZSocket service are enabled
 - Verify host-to-CNC network reachability (same subnet/routing/firewall)
@@ -274,10 +362,12 @@ Checklist:
 ### 2. Timeout / Slow Response
 
 Symptoms:
+
 - Read API intermittently fails
 - High latency or unstable polling loop
 
 Checklist:
+
 - Reduce polling frequency and group high/low frequency metrics separately
 - Avoid reading large text/program blocks in high-frequency loops
 - Check network quality (packet loss, jitter, duplex mismatch)
@@ -286,10 +376,12 @@ Checklist:
 ### 3. Read/Write Failed
 
 Symptoms:
+
 - API returns non-`M70_ERROR_CODE_OK`
 - Unexpected empty strings or zero values
 
 Checklist:
+
 - Validate `system_no`, axis index, and variable index ranges
 - Confirm target register/section is available on current machine configuration
 - Validate buffer sizes in caller for string outputs (`*_ex` APIs)
