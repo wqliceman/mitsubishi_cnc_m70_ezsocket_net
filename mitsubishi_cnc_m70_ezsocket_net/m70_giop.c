@@ -179,7 +179,7 @@ int receive_get_data_response(m70_conn_t* conn, int len, m70_data_type_e* data_t
 	return readLen;
 }
 
-int receive_data_response(m70_conn_t* conn, int len, int data_type, void* data)
+int receive_data_response(m70_conn_t* conn, int len, void* data)
 {
 	if (!check_conn_is_valid(conn))
 		return 0;
@@ -373,7 +373,7 @@ long melGetCurrentAlarmMsg(m70_conn_t* conn, int system_no, int msg_count, int m
 		code = mel_receive_response(conn, &giop, &msg_length);
 		if (code == 0)
 		{
-			msg_length -= receive_data_response(conn, msg_length, (int)T_STR, msg);
+			msg_length -= receive_data_response(conn, msg_length, msg);
 		}
 		receive_remain_info_response(conn, &msg_length);
 	}
@@ -411,7 +411,7 @@ long melGetCurrentPrgBlock(m70_conn_t* conn, int system_no, int row_count, void*
 		code = mel_receive_response(conn, &giop, &msg_length);
 		if (code == 0)
 		{
-			msg_length -= receive_data_response(conn, msg_length, (int)T_STR, msg);
+			msg_length -= receive_data_response(conn, msg_length, msg);
 		}
 		receive_remain_info_response(conn, &msg_length);
 	}
@@ -506,7 +506,7 @@ long melFsReadFile(m70_conn_t* conn, long fd, void* file_data, long* read_size, 
 			msg_length -= socket_recv_data_one_loop(conn->socket, read_size, sizeof(long));
 			if (*read_size)
 			{
-				msg_length -= receive_data_response(conn, *read_size, 0, file_data);
+				msg_length -= receive_data_response(conn, *read_size, file_data);
 			}
 		}
 		receive_remain_info_response(conn, &msg_length);
@@ -879,7 +879,7 @@ long melFsReadDirectory(m70_conn_t* conn, long fd, char* dirname)
 				msg_length -= socket_recv_data_one_loop(conn->socket, &size, sizeof(size));
 				if (size > 0)
 				{
-					msg_length -= receive_data_response(conn, size, 0, dirname);
+					msg_length -= receive_data_response(conn, size, dirname);
 					dirname[size - 1] = '\n';
 				}
 			}
@@ -984,7 +984,7 @@ void build_giop_header(m70_conn_t* conn, giop_header* giop)
 	giop->msg_type = MSG_TYPES_Request;
 }
 
-void build_request_pack_header(m70_conn_t* conn, request_pack_header* request, int op_name_length)
+void build_request_pack_header(m70_conn_t* conn, request_pack_header* request, uint32 op_name_length)
 {
 	if (request == NULL)
 		return;
@@ -995,7 +995,7 @@ void build_request_pack_header(m70_conn_t* conn, request_pack_header* request, i
 	request->sc_list = HtoNl(conn->little_endian, 0x00);
 	request->request_id = conn->request_id;
 	request->expected = 0x01;
-	memcpy(request->reserved, "\x0\x0\x0", 3);
+	memset(request->reserved, 0, sizeof(request->reserved));
 	request->object_key_length = HtoNl(conn->little_endian, 0x04);
 	request->object_key = HtoNl(conn->little_endian, 0x01);
 

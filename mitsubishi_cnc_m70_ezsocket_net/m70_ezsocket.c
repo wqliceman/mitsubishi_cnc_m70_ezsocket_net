@@ -385,6 +385,14 @@ m70_error_code_e m70_cnc_read_sub_program_name_ex(m70_conn_t* conn, short system
 	case PRG_TYPE_BlockNumber:
 		is_ok = 0 == melGetData(conn, 45, 203, system_no, 0, &data_type, &data);
 		break;
+
+	case PRG_TYPE_ProgramPath:
+		data_type = T_STR;
+		is_ok = 0 == melGetData(conn, 45, 200, system_no, 0, &data_type, &strData);
+		break;
+
+	default:
+		break;
 	}
 
 	if (is_ok)
@@ -525,8 +533,7 @@ m70_error_code_e m70_cnc_read_svo_load(m70_conn_t* conn, short system_no, short*
 	if (!check_conn_is_valid(conn))
 		return ret;
 
-	uint32 axis_flag = 1;
-	axis_flag = get_axis_real_no(axis_flag);
+	uint32 axis_flag = get_axis_real_no(axis_index == 0 ? 1U : axis_index);
 	short data;
 	m70_data_type_e data_type = T_SHORT;
 	if (0 == melGetData(conn, 59, 4, system_no, axis_flag, &data_type, &data))
@@ -761,7 +768,7 @@ m70_error_code_e m70_cnc_read_spindle_load(m70_conn_t* conn, short system_no, in
 	m70_data_type_e data_type = T_DLONG;
 	if (0 == melGetData(conn, 63, 4, system_no, axis_index, &data_type, &data))
 	{
-		*load = is_abs ? abs(data) : data;
+		*load = is_abs ? (int32)labs(data) : (int32)data;
 		ret = M70_ERROR_CODE_OK;
 	}
 

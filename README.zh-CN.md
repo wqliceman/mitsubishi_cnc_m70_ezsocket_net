@@ -86,7 +86,9 @@ make test
 - 使用 `mitsubishi_cnc_m70_ezsocket_net/mitsubishi_cnc_m70_ezsocket_net.sln`（Visual Studio）
 - 使用 WSL 执行 GNU Make 构建库、示例与测试目标
 
-当前 Visual Studio 工程仍然主要用于示例程序构建；独立静态库/动态库产物由上述 GNU Make 流程提供。
+当前 Visual Studio 解决方案已经拆分为静态库工程和示例程序工程，MSVC 原生构建产物输出到 `mitsubishi_cnc_m70_ezsocket_net/build/msvc/<Platform>/<Configuration>/`。
+
+上面的 GNU Make 流程仍然负责 POSIX 共享库和回归测试目标。
 
 ## 快速开始
 

@@ -49,6 +49,6 @@ long receive_remain_info_response(m70_conn_t* conn, int* len);
 // Internal utilities
 int mel_receive_response(m70_conn_t* conn, giop_header* giop, int* remain_length);
 void build_giop_header(m70_conn_t* conn, giop_header* giop);
-void build_request_pack_header(m70_conn_t* conn, request_pack_header* request, int op_name_length);
+void build_request_pack_header(m70_conn_t* conn, request_pack_header* request, uint32 op_name_length);
 
 #endif // __H_M70_GIOP_H__

@@ -86,7 +86,9 @@ You can use:
 - Visual Studio solution in `mitsubishi_cnc_m70_ezsocket_net/mitsubishi_cnc_m70_ezsocket_net.sln`
 - Or build library/example/test targets via WSL using GNU Make
 
-The Visual Studio project currently remains an example application project. The dedicated static/shared library outputs are provided by the GNU Make flow above.
+The Visual Studio solution now contains a static library project and a sample application project. Native MSVC outputs are written to `mitsubishi_cnc_m70_ezsocket_net/build/msvc/<Platform>/<Configuration>/`.
+
+The GNU Make flow above still provides the POSIX shared library and the regression test target.
 
 ## Quick Start
 

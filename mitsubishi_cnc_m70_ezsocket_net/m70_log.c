@@ -125,13 +125,20 @@ static void rotate_log_file_if_needed() {
     
     // Perform log file rotation
     char base_path[256] = {0};
-    char old_path[256] = {0};
-    char new_path[256] = {0};
+    char old_path[272] = {0};
+    char new_path[272] = {0};
+    size_t base_len = strlen(g_log_config.log_file_path);
+
+    if (base_len == 0) {
+        g_log_config.log_file = fopen(g_log_config.log_file_path, "a");
+        return;
+    }
     
-    strncpy(base_path, g_log_config.log_file_path, sizeof(base_path) - 1);
+    memcpy(base_path, g_log_config.log_file_path, base_len);
+    base_path[base_len] = '\0';
     
     // Delete the oldest log file
-    snprintf(old_path, sizeof(old_path), "%s.%d", base_path, g_log_config.max_file_count);
+    snprintf(old_path, sizeof(old_path), "%s.%u", base_path, g_log_config.max_file_count);
     remove(old_path);
     
     // Rename existing log files
@@ -174,6 +181,7 @@ bool m70_log_init(const m70_log_config_t* config) {
     if (g_log_config.target & M70_LOG_TARGET_FILE) {
         if (config->log_file_path[0] != '\0') {
             strncpy(g_log_config.log_file_path, config->log_file_path, sizeof(g_log_config.log_file_path) - 1);
+            g_log_config.log_file_path[sizeof(g_log_config.log_file_path) - 1] = '\0';
             
             // Ensure log directory exists
             if (!ensure_log_directory(g_log_config.log_file_path)) {
@@ -271,6 +279,7 @@ bool m70_log_set_file(const char* file_path) {
     
     // Set new log file path
     strncpy(g_log_config.log_file_path, file_path, sizeof(g_log_config.log_file_path) - 1);
+    g_log_config.log_file_path[sizeof(g_log_config.log_file_path) - 1] = '\0';
     
     // Ensure log directory exists
     if (!ensure_log_directory(g_log_config.log_file_path)) {
