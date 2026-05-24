@@ -11,6 +11,7 @@
 #ifndef __H_M70_ERROR_H__
 #define __H_M70_ERROR_H__
 
+#include "m70_api.h"
 #include "typedef.h"
 #include <stddef.h>
 
@@ -80,13 +81,13 @@ typedef struct _tag_m70_error_info
 #define M70_ERROR_RETURN_VALUE(code, retval, ...) do { M70_ERROR_SET(code, __VA_ARGS__); return retval; } while(0)
 
 // Error handling functions
-void m70_error_set(m70_error_code_ex_e code, const char* file, int line, const char* func, const char* message, ...);
-const m70_error_info_t* m70_error_get_last(void);
-const char* m70_error_get_description(m70_error_code_ex_e code);
-void m70_error_format(char* buffer, size_t buffer_size, const m70_error_info_t* error_info);
+M70_API void m70_error_set(m70_error_code_ex_e code, const char* file, int line, const char* func, const char* message, ...);
+M70_API const m70_error_info_t* m70_error_get_last(void);
+M70_API const char* m70_error_get_description(m70_error_code_ex_e code);
+M70_API void m70_error_format(char* buffer, size_t buffer_size, const m70_error_info_t* error_info);
 
 // Error code conversion functions
-m70_error_code_ex_e m70_error_code_to_ex(m70_error_code_e code);
-m70_error_code_e m70_error_ex_to_code(m70_error_code_ex_e ex_code);
+M70_API m70_error_code_ex_e m70_error_code_to_ex(m70_error_code_e code);
+M70_API m70_error_code_e m70_error_ex_to_code(m70_error_code_ex_e ex_code);
 
 #endif // __H_M70_ERROR_H__

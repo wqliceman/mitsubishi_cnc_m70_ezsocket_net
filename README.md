@@ -86,7 +86,21 @@ You can use:
 - Visual Studio solution in `mitsubishi_cnc_m70_ezsocket_net/mitsubishi_cnc_m70_ezsocket_net.sln`
 - Or build library/example/test targets via WSL using GNU Make
 
-The Visual Studio solution now contains a static library project and a sample application project. Native MSVC outputs are written to `mitsubishi_cnc_m70_ezsocket_net/build/msvc/<Platform>/<Configuration>/`.
+The Visual Studio solution now contains three native MSVC projects:
+- static library: `m70_ezsocket.lib`
+- dynamic library: `m70_ezsocket.dll` plus import library
+- sample application: `mitsubishi_cnc_m70_test.exe`
+
+The sample project keeps the original `Debug`/`Release` configurations for static linking and adds `DebugDll`/`ReleaseDll` configurations for DLL consumption. Those DLL-linked configurations define `M70_USE_DLL` and copy `m70_ezsocket.dll` beside the sample executable after build.
+
+Native MSVC outputs are written to:
+- `mitsubishi_cnc_m70_ezsocket_net/build/msvc/static/<Platform>/<Configuration>/`
+- `mitsubishi_cnc_m70_ezsocket_net/build/msvc/dll/<Platform>/<Configuration>/`
+- `mitsubishi_cnc_m70_ezsocket_net/build/msvc/sample/<Platform>/<Configuration>/`
+
+When consuming the DLL from external code, define `M70_USE_DLL` before including the public headers so the declarations switch to `dllimport`.
+
+GitHub Actions CI is available in `.github/workflows/ci.yml` and validates GNU Make on Ubuntu plus MSVC `Release` and `ReleaseDll` builds on Windows for both `x86` and `x64`.
 
 The GNU Make flow above still provides the POSIX shared library and the regression test target.
 

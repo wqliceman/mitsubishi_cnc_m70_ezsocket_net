@@ -11,6 +11,7 @@
 #ifndef __H_M70_LOG_H__
 #define __H_M70_LOG_H__
 
+#include "m70_api.h"
 #include <stdbool.h>
 
 // Log level definition
@@ -46,18 +47,18 @@ typedef struct _tag_m70_log_config
 } m70_log_config_t;
 
 // Log initialization and configuration functions
-bool m70_log_init(const m70_log_config_t* config);
-void m70_log_shutdown(void);
-void m70_log_set_level(m70_log_level_e level);
-void m70_log_set_target(m70_log_target_e target);
-bool m70_log_set_file(const char* file_path);
+M70_API bool m70_log_init(const m70_log_config_t* config);
+M70_API void m70_log_shutdown(void);
+M70_API void m70_log_set_level(m70_log_level_e level);
+M70_API void m70_log_set_target(m70_log_target_e target);
+M70_API bool m70_log_set_file(const char* file_path);
 
 // Log output functions
-void m70_log_debug(const char* format, ...);
-void m70_log_info(const char* format, ...);
-void m70_log_warning(const char* format, ...);
-void m70_log_error(const char* format, ...);
-void m70_log_fatal(const char* format, ...);
+M70_API void m70_log_debug(const char* format, ...);
+M70_API void m70_log_info(const char* format, ...);
+M70_API void m70_log_warning(const char* format, ...);
+M70_API void m70_log_error(const char* format, ...);
+M70_API void m70_log_fatal(const char* format, ...);
 
 // Log output macros with file and line number
 #define M70_LOG_DEBUG(format, ...) m70_log_debug_ex(__FILE__, __LINE__, format, ##__VA_ARGS__)
@@ -67,10 +68,10 @@ void m70_log_fatal(const char* format, ...);
 #define M70_LOG_FATAL(format, ...) m70_log_fatal_ex(__FILE__, __LINE__, format, ##__VA_ARGS__)
 
 // Log output functions with file and line number
-void m70_log_debug_ex(const char* file, int line, const char* format, ...);
-void m70_log_info_ex(const char* file, int line, const char* format, ...);
-void m70_log_warning_ex(const char* file, int line, const char* format, ...);
-void m70_log_error_ex(const char* file, int line, const char* format, ...);
-void m70_log_fatal_ex(const char* file, int line, const char* format, ...);
+M70_API void m70_log_debug_ex(const char* file, int line, const char* format, ...);
+M70_API void m70_log_info_ex(const char* file, int line, const char* format, ...);
+M70_API void m70_log_warning_ex(const char* file, int line, const char* format, ...);
+M70_API void m70_log_error_ex(const char* file, int line, const char* format, ...);
+M70_API void m70_log_fatal_ex(const char* file, int line, const char* format, ...);
 
 #endif // __H_M70_LOG_H__

@@ -86,7 +86,21 @@ make test
 - 使用 `mitsubishi_cnc_m70_ezsocket_net/mitsubishi_cnc_m70_ezsocket_net.sln`（Visual Studio）
 - 使用 WSL 执行 GNU Make 构建库、示例与测试目标
 
-当前 Visual Studio 解决方案已经拆分为静态库工程和示例程序工程，MSVC 原生构建产物输出到 `mitsubishi_cnc_m70_ezsocket_net/build/msvc/<Platform>/<Configuration>/`。
+当前 Visual Studio 解决方案已经包含三类 MSVC 原生产物：
+- 静态库：`m70_ezsocket.lib`
+- 动态库：`m70_ezsocket.dll` 与对应 import lib
+- 示例程序：`mitsubishi_cnc_m70_test.exe`
+
+示例工程保留原有 `Debug`/`Release` 静态链接配置，同时新增 `DebugDll`/`ReleaseDll` 两套 DLL 消费配置。这两套配置会定义 `M70_USE_DLL`，并在构建后把 `m70_ezsocket.dll` 复制到示例程序输出目录。
+
+MSVC 构建产物输出到：
+- `mitsubishi_cnc_m70_ezsocket_net/build/msvc/static/<Platform>/<Configuration>/`
+- `mitsubishi_cnc_m70_ezsocket_net/build/msvc/dll/<Platform>/<Configuration>/`
+- `mitsubishi_cnc_m70_ezsocket_net/build/msvc/sample/<Platform>/<Configuration>/`
+
+如果外部工程要链接 DLL，请在包含公开头文件前定义 `M70_USE_DLL`，让声明自动切换为 `dllimport`。
+
+GitHub Actions CI 已配置在 `.github/workflows/ci.yml`，会在 Ubuntu 上验证 GNU Make 构建与测试，并在 Windows 上分别验证 `Release` 与 `ReleaseDll` 的 MSVC 构建，覆盖 `x86` 和 `x64`。
 
 上面的 GNU Make 流程仍然负责 POSIX 共享库和回归测试目标。
 

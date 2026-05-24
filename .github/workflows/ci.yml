@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  gnu-make:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build with GNU Make
+        run: make all
+
+      - name: Run regression tests
+        run: make test
+
+  windows-msvc:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [x64, x86]
+        configuration: [Release, ReleaseDll]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build solution
+        run: msbuild mitsubishi_cnc_m70_ezsocket_net\mitsubishi_cnc_m70_ezsocket_net.sln /m /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }}
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.configuration }}-${{ matrix.platform }}
+          path: |
+            mitsubishi_cnc_m70_ezsocket_net\build\msvc\static\${{ matrix.platform }}\**
+            mitsubishi_cnc_m70_ezsocket_net\build\msvc\dll\${{ matrix.platform }}\**
+            mitsubishi_cnc_m70_ezsocket_net\build\msvc\sample\${{ matrix.platform }}\**
+          if-no-files-found: error
